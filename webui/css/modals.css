@@ -29,6 +29,7 @@ the old and the new system. */
   width: min(92vw, 980px);
   max-width: calc(100vw - 24px);
   max-height: min(88vh, 900px);
+  max-height: min(88dvh, 900px);
   border: 1px solid color-mix(in srgb, var(--color-border) 68%, transparent);
   border-radius: 7px;
   background: color-mix(in srgb, var(--color-background) 94%, #000 6%);
@@ -170,6 +171,7 @@ the old and the new system. */
 .modal-scroll {
   min-height: 0;
   max-height: min(88vh, 900px);
+  max-height: min(88dvh, 900px);
   overflow-y: auto;
   padding: 0.9rem 1rem 1rem;
   background: color-mix(in srgb, var(--color-background) 95%, #000 5%);
