@@ -3,6 +3,10 @@ services:
     container_name: agent-zero
     image: agent0ai/agent-zero:latest
     volumes:
-      - ./agent-zero:/a0
+      - /root/agent-zero-data/usr:/a0/usr
+      - /root/agent-zero-data/logs:/a0/logs
     ports:
       - "50080:80"
+    restart: unless-stopped
+    mem_limit: 3g
+    memswap_limit: 4g
