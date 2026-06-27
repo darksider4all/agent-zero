@@ -1,6 +1,12 @@
 <div align="center">
 
-# `Agent Zero`
+# `Agent Zero` — homelab data fork
+
+> **What this repo is.** Personal fork of [`agent0ai/agent-zero`](https://github.com/agent0ai/agent-zero)
+> used as the **host-side bind-mount source** for the agent-zero container on the homelab
+> gateway (LXC 105 / 192.168.0.115). `usr/`, `logs/`, and `docker/run/` here are mounted live
+> into the running container. See [Homelab deployment notes](#homelab-deployment-notes) at the bottom
+> for layout, the locally-built image, and the patches that diverge from upstream.
 
 <p align="center">
     <a href="https://trendshift.io/repositories/11745" target="_blank"><img src="https://trendshift.io/api/badge/repositories/11745" alt="frdel%2Fagent-zero | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
@@ -399,3 +405,58 @@ Default models set to gpt-4.1
 - [Join our Discord](https://discord.gg/B8KZKNsPpj) for live discussions or [visit our Skool Community](https://www.skool.com/agent-zero).
 - [Follow our YouTube channel](https://www.youtube.com/@AgentZeroFW) for hands-on explanations and tutorials
 - [Report Issues](https://github.com/agent0ai/agent-zero/issues) for bug fixes and features
+
+---
+
+## Homelab deployment notes
+
+This checkout is the **host-side data directory** for the running agent-zero container. Most of the tree is just the upstream working copy; only the subdirs and files listed under "Layout" actually drive the deployment, and the patches under "Local-only commits" are the only deltas vs `upstream/main`.
+
+### Layout
+
+| Path on host | Mount target in container | Purpose |
+|---|---|---|
+| `usr/` | `/a0/usr/` (bind mount) | User plugins, chats, scheduler tasks, FAISS memory store, knowledge graph, MemPalace data, project workdirs |
+| `logs/` | `/a0/logs/` (bind mount) | Agent runtime logs (per-chat HTML transcripts, mempalace-api.log, …) |
+| `docker/run/docker-compose.yml` | — | The compose file that brings up the container; pins the image and bind mounts |
+| `docker/run/agent-zero/` | — | Local build context (`DockerfileLocal`, install scripts, copied git tree) for the locally-built image. Gitignored. |
+| `data/` | — | Misc local working dir; gitignored. |
+
+### Running image
+
+- **Image:** `agent-zero-homelab:v2.1-p1`
+- **Source repo:** [`darksider4all/agent-zero`](https://github.com/darksider4all/agent-zero) on branch `homelab` (upstream v2.1 + two framework patches; see that repo's README for details)
+- **Container name:** `agent-zero`
+- **Port:** `50080:80` on the agent LXC (192.168.0.115)
+- **Limits:** `mem_limit: 3g`, `memswap_limit: 4g`
+- **Companion container on the same host:** `ollama-embed` serving `snowflake-arctic-embed2` (1024-dim, CPU)
+
+### Local-only commits on top of `upstream/main` (branch `main`)
+
+| Commit | Title | What changed |
+|---|---|---|
+| [`6c29563`](https://github.com/darksider4all/agent-zero/commit/6c29563) | memory cold-start retry, increase container memory limit | `usr/plugins/_memory/extensions/python/monologue_start/_10_memory_init.py` — retry `_memory` init on 400 / connection errors with 10–45 s backoff to ride out the ollama-embed cold-start race. `docker/run/docker-compose.yml` — raise `mem_limit` 2 g → 3 g and `memswap_limit` 3 g → 4 g to prevent OOM under heavy load. `.gitignore` — exclude the nested `docker/run/agent-zero/` build context. |
+| [`76bc7395`](https://github.com/darksider4all/agent-zero/commit/76bc7395) | ops(compose): point at locally-built `agent-zero-homelab:v2.1-p1` | `docker/run/docker-compose.yml` (+1 −1) — switches `image:` from upstream `agent0ai/agent-zero:latest` (v1.20-based) to the locally-built `agent-zero-homelab:v2.1-p1` (upstream v2.1 + truncation + mobile CSS patches from the `agent-zero-src` homelab branch). |
+
+### Sync with upstream
+
+```bash
+git fetch upstream
+git checkout main
+git rebase upstream/main   # or: git merge upstream/main
+```
+
+### Operations cheatsheet
+
+```bash
+# Bring the container up / down
+cd docker/run && docker compose up -d
+cd docker/run && docker compose down
+
+# In-container service control (safe — does not touch the container itself)
+docker exec agent-zero supervisorctl status
+docker exec agent-zero supervisorctl restart run_ui
+
+# Memory store backups (one-off)
+ls /root/agent-zero-data/usr/memory/default/*.bak_*
+```
