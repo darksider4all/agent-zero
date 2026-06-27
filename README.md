@@ -7,6 +7,10 @@
 
 Agent Zero is an open, dynamic, organic agentic framework. One Docker container ships a full Linux system with a desktop and a plugin hub that the agent can extend using Skills.
 
+> **Homelab fork.** This is a personal fork of [`agent0ai/agent-zero`](https://github.com/agent0ai/agent-zero).
+> The `homelab` branch carries a small set of patches and is the source baked into the local Docker image `agent-zero-homelab:v2.1-p1`.
+> See [Homelab fork notes](#homelab-fork-notes) at the bottom for the deltas vs upstream.
+
 [![Website](https://img.shields.io/badge/Website-agent--zero.ai-0A192F?style=for-the-badge&logo=vercel&logoColor=white)](https://agent-zero.ai)
 [![Docs](https://img.shields.io/badge/Docs-Read%20the%20guides-1F6FEB?style=for-the-badge&logo=readthedocs&logoColor=white)](./docs/)
 [![Discord](https://img.shields.io/badge/Discord-Join%20us-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/B8KZKNsPpj)
@@ -314,3 +318,35 @@ You can help by improving docs, creating skills, publishing plugins, testing mod
 - [YouTube](https://www.youtube.com/@AgentZeroFW) for demos and tutorials.
 - [X](https://x.com/Agent0ai), [LinkedIn](https://www.linkedin.com/company/109758317), and [Warpcast](https://warpcast.com/agent-zero) for updates.
 - [GitHub Issues](https://github.com/agent0ai/agent-zero/issues) for bugs and feature requests.
+
+---
+
+## Homelab fork notes
+
+This repository is a personal fork of [`agent0ai/agent-zero`](https://github.com/agent0ai/agent-zero). The framework source on the `homelab` branch is the build context for `DockerfileLocal` with `BRANCH=local`, producing the local image `agent-zero-homelab:v2.1-p1` that the host's container runs.
+
+**Local-only commits on top of `upstream/main` (branch `homelab`):**
+
+| Commit | Title | What changed |
+|---|---|---|
+| [`b3cdb01`](https://github.com/darksider4all/agent-zero/commit/b3cdb01) | mobile responsive settings modal for iPhone/small screens | `webui/css/modals.css` + `webui/css/settings.css` (+136 lines). Full-screen modal at `max-width: 480px` using `dvh` units, horizontal scrollable tab strip replacing the vertical sidebar, compact footer with `safe-area-inset` for notch/home indicator, scaled-down padding/font sizes/field spacing. `dvh` fallback added to the 720 px breakpoint + base `modal-inner`. Fixes the settings modal being unusable on iPhone (buttons off-screen, 224 px sidebar eating the viewport, `100vh` ignoring the Safari toolbar). |
+| [`e2540d3`](https://github.com/darksider4all/agent-zero/commit/e2540d3) | configurable terminal output truncation to prevent context blowup | `plugins/_code_execution/default_config.yaml` + `plugins/_code_execution/tools/code_execution_tool.py` (+7 lines). Replaces the hard-coded 1 M-char (~250 K-token) threshold in `fix_full_output()` with a `max_output_chars` knob (default 30 000 chars ≈ 7.5 K tokens), reads it from plugin config in `_get_config()`. Prevents a grep through minified JS from blowing the LLM context window. |
+
+**Branch layout:**
+
+| Branch | Purpose |
+|---|---|
+| `homelab` *(default for local builds)* | Tracks `upstream/main` + the two patches above; what gets baked into the Docker image. |
+| `main` | Plain mirror of `upstream/main`. |
+| `homelab-v1.20-archive` | Frozen pre-v2.1 state, kept for rollback. |
+| `fix/configurable-output-truncation` | Working branch behind `e2540d3` — kept for the upstream PR. |
+
+**Sync with upstream:**
+
+```bash
+git fetch upstream
+git checkout homelab
+git rebase upstream/main   # or: git merge upstream/main
+# then rebuild the image:
+cd docker/run && docker compose build agent-zero
+```
