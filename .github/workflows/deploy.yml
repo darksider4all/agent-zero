@@ -1,0 +1,86 @@
+# agent-zero — manual deploy to agent LXC.
+# Goes into: agent-zero/.github/workflows/deploy.yml
+#
+# Strictly manual (workflow_dispatch). Calls scripts/deploy.sh on the
+# target, which handles FAISS backup → image swap → healthcheck triple
+# → auto-rollback if any check fails.
+#
+# Inputs:
+#   image_tag       — e.g. "latest" (default) or "homelab-abc1234"
+#   confirm         — must equal repository name; double-check guard
+
+name: deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Image tag (default: latest, which the last green build promoted to)'
+        required: true
+        default: 'latest'
+        type: string
+      confirm:
+        description: 'Type the repo name to confirm (darksider4all/agent-zero)'
+        required: true
+        type: string
+
+concurrency:
+  group: agent-zero-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, homelab, deploys-to-115]
+    timeout-minutes: 10
+    environment:
+      # GitHub Environment can add manual-approval gates if you turn
+      # required reviewers on. Even without, workflow_dispatch + the
+      # confirm input is a two-step trigger.
+      name: production
+      url: http://192.168.0.115:50080
+    steps:
+      - name: Guard — confirm input
+        if: github.event.inputs.confirm != github.repository
+        run: |
+          echo "::error::confirm input must equal '${{ github.repository }}'"
+          exit 1
+
+      - uses: actions/checkout@v4
+
+      - name: Sync deploy.sh to agent LXC
+        run: |
+          rsync -e 'ssh' -avz scripts/deploy.sh agent:/home/deploy/agent-zero-deploy.sh
+          ssh agent 'chmod +x /home/deploy/agent-zero-deploy.sh'
+
+      - name: Run deploy.sh on agent LXC
+        id: run
+        # deploy.sh exits non-zero on rollback so this step fails correctly.
+        run: |
+          ssh agent "/home/deploy/agent-zero-deploy.sh '${{ github.event.inputs.image_tag }}'"
+
+      - name: Independent healthcheck (defense in depth)
+        # Re-verify from the runner side after deploy.sh says it's done.
+        run: |
+          code=$(curl -sIo /dev/null -w '%{http_code}' --max-time 5 "http://192.168.0.115:50080/" || echo "000")
+          [[ "$code" == "302" ]] || { echo "post-deploy UI check failed: $code"; exit 1; }
+          echo "UI returns 302 from infra runner — deploy confirmed live"
+
+      - name: Telegram notify success
+        if: success()
+        env:
+          BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          curl -fsS "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
+            --data-urlencode "chat_id=${CHAT_ID}" \
+            --data-urlencode "text=✅ agent-zero deployed: tag=${{ github.event.inputs.image_tag }} by ${{ github.actor }}"
+
+      - name: Telegram notify rollback
+        if: failure()
+        env:
+          BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          curl -fsS "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
+            --data-urlencode "chat_id=${CHAT_ID}" \
+            --data-urlencode "text=⚠️ agent-zero deploy FAILED — rolled back. ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

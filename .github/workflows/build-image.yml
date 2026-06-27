@@ -1,0 +1,115 @@
+# agent-zero — build the homelab Docker image on every push to homelab.
+# Goes into: agent-zero/.github/workflows/build-image.yml
+#
+# Does NOT deploy. New image is tagged `agent-zero-homelab:homelab-<sha>`
+# and `:latest` moves to it ONLY after the smoke test passes. The live
+# container is untouched — deploy.yml (workflow_dispatch) is the only
+# path that swaps the running container.
+#
+# Last 3 `homelab-*` tags retained; older ones pruned to free disk.
+
+name: build-image
+
+on:
+  push:
+    branches: [homelab]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+  workflow_dispatch: {}
+
+concurrency:
+  group: agent-zero-build
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: [self-hosted, homelab, deploys-to-115]
+    timeout-minutes: 20
+    outputs:
+      image-tag: ${{ steps.tag.outputs.image }}
+    steps:
+      - name: Compute tags
+        id: tag
+        run: |
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          IMAGE="agent-zero-homelab:homelab-${SHORT_SHA}"
+          echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
+          echo "short-sha=${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Sync homelab branch to agent LXC build context
+        # The build happens on the target so the image lands in the right
+        # Docker daemon. Use rsync rather than ssh+git-clone so we don't
+        # need credentials inside the container.
+        run: |
+          ssh agent '
+            mkdir -p /tmp/agent-zero-build &&
+            cd /tmp/agent-zero-build &&
+            git clone --depth 1 --branch homelab \
+              https://github.com/${{ github.repository }} . 2>/dev/null ||
+              (git fetch --depth 1 origin homelab && git reset --hard origin/homelab)
+          '
+
+      - name: Build image on agent LXC
+        # Use DockerfileLocal with BRANCH=local so install_A0.sh copies
+        # the local git tree (the homelab patches) into the image.
+        run: |
+          ssh agent "
+            cd /tmp/agent-zero-build &&
+            sudo docker build \
+              -f DockerfileLocal \
+              --build-arg BRANCH=local \
+              --build-arg CACHE_DATE=\$(date +%Y%m%d-%H%M%S) \
+              -t ${{ steps.tag.outputs.image }} \
+              .
+          "
+
+      - name: Smoke test — import core framework
+        run: |
+          ssh agent "
+            sudo docker run --rm ${{ steps.tag.outputs.image }} \
+              /opt/venv-a0/bin/python3 -c '
+import sys; sys.path.insert(0, \"/a0\")
+from agent import Agent
+from helpers import settings, files
+from helpers.print_style import PrintStyle
+print(\"smoke OK\")
+              '
+          "
+
+      - name: Promote tag to :latest
+        # Only if smoke passed. :latest is the default tag for deploy.yml.
+        run: |
+          ssh agent "sudo docker tag ${{ steps.tag.outputs.image }} agent-zero-homelab:latest"
+
+      - name: Prune old homelab-* images (keep last 3)
+        run: |
+          ssh agent '
+            sudo docker images agent-zero-homelab --format "{{.Tag}} {{.ID}}" |
+              awk "/^homelab-/ {print}" | sort -r | tail -n +4 |
+              awk "{print \$2}" | xargs -r sudo docker rmi -f || true
+          '
+
+      - name: Telegram notify success
+        if: success()
+        env:
+          BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          curl -fsS "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
+            --data-urlencode "chat_id=${CHAT_ID}" \
+            --data-urlencode "text=🐳 agent-zero image built: ${{ steps.tag.outputs.image }} (tagged :latest, not deployed)"
+
+  notify-failure:
+    needs: build
+    if: failure()
+    runs-on: [self-hosted, homelab]
+    steps:
+      - name: Telegram notify failure
+        env:
+          BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          curl -fsS "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
+            --data-urlencode "chat_id=${CHAT_ID}" \
+            --data-urlencode "text=❌ agent-zero image build failed — ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
