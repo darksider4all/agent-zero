@@ -1,11 +1,19 @@
-from git import Git, Repo
-from giturlparse import parse
+try:
+    from git import Git, Repo
+except ImportError:
+    Git = None
+    Repo = None
+try:
+    from giturlparse import parse
+except ImportError:
+    parse = None
 from datetime import datetime
 from dataclasses import dataclass
 import os
 import subprocess
 import base64
 import re
+import json
 from urllib.parse import urlparse, urlunparse
 from helpers import files
 from helpers.localization import Localization
@@ -379,12 +387,34 @@ def get_repo_release_info(repo_path: str) -> GitRepoReleaseInfo:
         )
 
 
+def _read_version_file():
+    """Fall back to VERSION file when no git repo is available (e.g. Docker image)."""
+    version_path = os.path.join(files.get_base_dir(), "VERSION")
+    try:
+        with open(version_path, "r") as f:
+            data = json.load(f)
+        return {
+            "branch": data.get("branch", ""),
+            "commit_hash": data.get("commit_hash", ""),
+            "commit_time": data.get("commit_time", ""),
+            "tag": data.get("tag", ""),
+            "short_tag": data.get("short_tag", ""),
+            "version": data.get("version", ""),
+        }
+    except Exception:
+        return None
+
+
 def get_git_info():
     # Get the current working directory (assuming the repo is in the same folder as the script)
     repo_path = files.get_base_dir()
 
     state = get_repo_release_info(repo_path)
     if not state.is_git_repo:
+        # Fall back to VERSION file (Docker images without .git)
+        fallback = _read_version_file()
+        if fallback:
+            return fallback
         raise ValueError(state.error or f"Repository at {repo_path} is not usable.")
 
     return {
