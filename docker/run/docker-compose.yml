@@ -1,14 +1,12 @@
 services:
   agent-zero:
     container_name: agent-zero
-    image: agent0ai/agent-zero:latest
+    image: agent-zero-homelab:v2.1-p1
     volumes:
-      - ./agent-zero:/a0
+      - /root/agent-zero-data/usr:/a0/usr
+      - /root/agent-zero-data/logs:/a0/logs
     ports:
       - "50080:80"
-    ulimits:
-      nofile:
-        soft: 65535
-        hard: 65535
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    mem_limit: 3g
+    memswap_limit: 4g

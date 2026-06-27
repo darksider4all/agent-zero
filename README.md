@@ -1,6 +1,12 @@
 <div align="center">
 
-<img src="docs/res/a0-vector-graphics/horizontal_banner.svg" alt="Agent Zero Banner" width="100%"/>
+# `Agent Zero` — homelab data fork
+
+> **What this repo is.** Personal fork of [`agent0ai/agent-zero`](https://github.com/agent0ai/agent-zero)
+> used as the **host-side bind-mount source** for the agent-zero container on the homelab
+> gateway (LXC 105 / 192.168.0.115). `usr/`, `logs/`, and `docker/run/` here are mounted live
+> into the running container. See [Homelab deployment notes](#homelab-deployment-notes) at the bottom
+> for layout, the locally-built image, and the patches that diverge from upstream.
 
 # Agent Zero
 ### A full Linux system for your AI agent.
@@ -134,183 +140,312 @@ See the [Browser guide](./docs/guides/browser.md) for screenshots, settings, hos
 
 The Canvas includes a rich Markdown editor designed for genuine cowork. Ask the agent to "write a plan to do X in a TODO.md in the open doc" and you'll see the file appear in the editor, character by character, while you keep typing in another section.
 
-It's not a preview pane. It's a real editor with toolbar, formatting buttons, tables, and an editable source view - built so that the agent's edits and yours are equal first-class operations on the same document.
+## 👀 Keep in Mind
 
-Use it for plans, TODOs, meeting notes, RFCs, project handoffs, or any artifact where the deliverable should *live as text* rather than be trapped inside chat scrollback.
+1. **Agent Zero Can Be Dangerous!**
 
-### LibreOffice Integration
+- With proper instruction, Agent Zero is capable of many things, even potentially dangerous actions concerning your computer, data, or accounts. Always run Agent Zero in an isolated environment (like Docker) and be careful what you wish for.
 
-LibreOffice Writer, Calc, and Impress are wired up so you can type by hand while Agent Zero creates, updates, saves, and verifies the same files in real time.
+2. **Agent Zero Is Prompt-based.**
 
-ODT, ODS, and ODP binary formats are first-class citizens in the Agent Zero Desktop environment to align with the Open Document Format (ODF).
+- The whole framework is guided by the **prompts/** folder. Agent guidelines, tool instructions, messages, utility AI functions, it's all there.
 
-Use the Desktop toolbar to create and edit Writer, Spreadsheet, and Presentation LibreOffice files.
 
-## Plugin Hub - 100+ Community Plugins
+## 📚 Read the Documentation
 
-<img alt="Agent Zero Plugin Hub showing community plugins" src="docs/res/usage/plugins/plugin-hub-browse.png" />
-<br>
+| Page | Description |
+|-------|-------------|
+| [Installation](./docs/setup/installation.md) | Installation, setup and configuration |
+| [Usage](./docs/guides/usage.md) | Basic and advanced usage |
+| [Guides](./docs/guides/) | Step-by-step guides: Usage, Projects, API Integration, MCP Setup, A2A Setup |
+| [Development Setup](./docs/setup/dev-setup.md) | Development and customization |
+| [WebSocket Infrastructure](./docs/developer/websockets.md) | Real-time WebSocket handlers, client APIs, filtering semantics, envelopes |
+| [Extensions](./docs/developer/extensions.md) | Extending Agent Zero |
+| [Connectivity](./docs/developer/connectivity.md) | External API endpoints, MCP server connections, A2A protocol |
+| [Architecture](./docs/developer/architecture.md) | System design and components |
+| [Contributing](./docs/guides/contribution.md) | How to contribute |
+| [Troubleshooting](./docs/guides/troubleshooting.md) | Common issues and their solutions |
 
-Agent Zero is built for extension, not just configuration. The built-in **Plugin Hub** browses a growing catalog of community plugins - currently more than 100, covering:
 
-- **Development frameworks** like the [BMAD Method](https://github.com/bmad-code-org/bmad-method) (full software development lifecycle with 20 specialist agents) and [Agent Skills](https://github.com/addyosmani/agent-skills).
-- **Memory systems** - alternative memory backends, intelligent consolidation strategies, vector recall plugins.
-- **Tools and integrations** - embedded terminals, custom browsers, deployment helpers, API clients.
-- **UI extensions** - chat rename controls, sidebar tweaks, theme packs, custom Canvas panels.
-- **Workflow plugins** - schedulers, multi-agent orchestration, project automations.
+## 🎯 Changelog
 
-Install with a click from the Web UI, or publish your own to the index repository. Combined with custom prompts in `prompts/`, custom tools in `tools/`, MCP servers, A2A connectors, and project-scoped configuration, Agent Zero gives you a real surface area to shape the agent into whatever you need.
+GitHub release notes for the latest eligible `main` tag are generated during `.github/workflows/docker-publish.yml` from commit subjects and descriptions since the previous published release, using OpenRouter and the editable prompt in `scripts/openrouter_release_notes_system_prompt.md`.
 
-See the [Skills guide](./docs/guides/skills.md), the [Create a Small Plugin](./docs/guides/create-plugin.md) tutorial, and the [MCP setup](./docs/guides/mcp-setup.md) guide.
+### v0.9.8 - Skills, UI Redesign & Git projects
+[Release video](https://youtu.be/NV7s78yn6DY)
 
-## Use Your OpenAI Codex Plan
+- Skills
+    - Skills System replacing the legacy Instruments with a new `SKILL.md` standard for structured, portable agent capabilities.
+    - Built-in skills, and UI support for importing and listing skills
+- Real-time WebSocket infrastructure replacing the polling-based approach for UI state synchronization
+- UI Redesign
+    - Process groups to visually group agent actions with expand/collapse support
+    - Timestamps, steps count and execution time with tool-specific badges
+    - Step detail modals with key-value and raw JSON display
+    - Collapsible responses with show more/less and copy buttons on code blocks and tables
+    - Message queue system allowing users to queue messages while the agent is still processing
+    - In-browser file editor for viewing and editing files without leaving the UI
+    - Welcome screen redesign with info and warning banners for connection security, missing API keys, and system resources
+    - Scheduler redesign with standalone modal, separate task list, detail and editor components, and project support
+    - Smooth response rendering and scroll stabilization across chat, terminals, and image viewer
+    - Chat width setting and reworked preferences panel
+    - Image viewer improvements with scroll support and expanded viewer
+    - Redesigned sidebar with reusable dropdown component and streamlined buttons
+    - Inline button confirmations for critical actions
+    - Improved login design and new logout button
+    - File browser enhanced with rename and file actions dropdown
+- Git projects
+    - Git-based projects with clone authentication for public and private repositories
+- Four new LLM providers: CometAPI, Z.AI, Moonshot AI, and AWS Bedrock
+- Microsoft Dev Tunnels integration for secure remote access
+- User data migration to `/usr` directory for cleaner separation of user and system files
+- Subagents system with configurable agent profiles for different roles
+- Memory operations offloaded to deferred tasks for better performance
+- Environment variables can now configure settings via `A0_SET_*` prefix in `.env`
+- Automatic migration with overwrite support for `.env`, scheduler, knowledge, and legacy directories
+- Projects support extended to MCP, A2A, and external API
+- Workdir outside project support for more flexible file organization
+- Agent number tracking in backend and responses for multi-agent identification
+- Many bug fixes and stability improvements across the UI, MCP tools, scheduler, uploads, and WebSocket handling
 
-<img alt="OAuth LLM plans in Agent Zero" src="docs/res/codex-screenshot.png" />
-<br>
 
-Agent Zero connects to your OpenAI Codex plan through the new OAuth flow. Sign in with your account, pick the Codex-backed provider, and let Agent Zero use the plan you already have. Click "Connect", enter the device code in the OpenAI page, choose your model, and you're set.
+### v0.9.7 - Projects
+[Release video](https://youtu.be/RrTDp_v9V1c)
+- Projects management
+    - Support for custom instructions
+    - Integration with memory, knowledge, files
+    - Project specific secrets 
+- New Welcome screen/Dashboard
+- New Wait tool
+- Subordinate agent configuration override support
+- Support for multiple documents at once in document_query_tool
+- Improved context on interventions
+- Openrouter embedding support
+- Frontend components refactor and polishing
+- SSH metadata output fix
+- Support for windows powershell in local TTY utility
+- More efficient selective streaming for LLMs
+- UI output length limit improvements
 
-This is the first step toward account-backed LLM plans in Agent Zero. More integrations are coming, including Gemini CLI and Claude Code through extra-usage.
+### v0.9.6 - Memory Dashboard
+[Release video](https://youtu.be/sizjAq2-d9s)
+- Memory Management Dashboard
+- Kali update
+- Python update + dual installation
+- Browser Use update
+- New login screen
+- LiteLLM retry on temporary errors
+- Github Copilot provider support
 
-## A0 CLI Connector: Extend Onto Your Host Machine
+### v0.9.5 - Secrets
+[Release video](https://www.youtube.com/watch?v=VqxUdt7pjd8)
+- Secrets management - agent can use credentials without seeing them
+- Agent can copy paste messages and files without rewriting them
+- LiteLLM global configuration field
+- Browser agent configuration improvements
+- Progressive web app support
+- Extra model params support for JSON
+- Short IDs for files and memories to prevent LLM errors
+- Tunnel component frontend rework
+- Fix for timezone change bug
+- Notifications z-index fix
 
-<img alt="A0 CLI driving the host browser through a Google Cloud VM creation flow" src="docs/res/usage/a0-cli/host-browser.gif" />
-<br>
+### v0.9.4 - Connectivity, UI
+[Release video](https://www.youtube.com/watch?v=C2BAdDOduIc)
+- External API endpoints
+- Streamable HTTP MCP A0 server
+- A2A (Agent to Agent) protocol - server+client
+- New notifications system
+- New local terminal interface for stability
+- Rate limiter integration to models
+- Delayed memory recall
+- Smarter autoscrolling in UI
+- Action buttons in messages
+- Multiple API keys support
+- Download streaming
+- Tunnel URL QR code
+- Internal fixes and optimizations
 
-The **A0 CLI Connector** is not a separate CLI agent. It connects to a running Agent Zero instance and gives that instance a terminal-native bridge to your host machine - so the same agent (with all its memory, projects, and skills) can also work on real files outside the Docker container.
+### v0.9.3 - Subordinates, memory, providers Latest
+[Release video](https://www.youtube.com/watch?v=-LfejFWL34k)
+- Faster startup/restart
+- Subordinate agents can have dedicated prompts, tools and system extensions
+- Streamable HTTP MCP server support
+- Memory loading enhanced by AI filter
+- Memory AI consolidation when saving memories
+- Auto memory system configuration in settings
+- LLM providers available are set by providers.yaml configuration file
+- Venice.ai LLM provider supported
+- Initial agent message for user + as example for LLM
+- Docker build support for local images
+- File browser fix
 
-Install the connector on the machine you want Agent Zero to work on, **not** inside the Agent Zero container.
+### v0.9.2 - Kokoro TTS, Attachments
+[Release video](https://www.youtube.com/watch?v=sPot_CAX62I)
 
-### macOS / Linux
+- Kokoro text-to-speech integration
+- New message attachments system
+- Minor updates: log truncation, hyperlink targets, component examples, api cleanup
+
+### v0.9.1 - LiteLLM, UI improvements
+[Release video](https://youtu.be/crwr0M4Spcg)
+- Langchain replaced with LiteLLM
+    - Support for reasoning models streaming
+    - Support for more providers
+    - Openrouter set as default instead of OpenAI
+- UI improvements
+    - New message grouping system
+    - Communication smoother and more efficient
+    - Collapsible messages by type
+    - Code execution tool output improved
+    - Tables and code blocks scrollable
+    - More space efficient on mobile
+- Streamable HTTP MCP servers support
+- LLM API URL added to models config for Azure, local and custom providers
+
+### v0.9.0 - Agent roles, backup/restore
+[Release video](https://www.youtube.com/watch?v=rMIe-TC6H-k)
+- subordinate agents can use prompt profiles for different roles
+- backup/restore functionality for easier upgrades
+- security and bug fixes
+
+### v0.8.7 - Formatting, Document RAG Latest
+[Release video](https://youtu.be/OQJkfofYbus)
+- markdown rendering in responses
+- live response rendering
+- document Q&A tool
+
+### v0.8.6 - Merge and update
+[Release video](https://youtu.be/l0qpK3Wt65A)
+- Merge with Hacking Edition
+- browser-use upgrade and integration re-work
+- tunnel provider switch
+
+### v0.8.5 - **MCP Server + Client**
+[Release video](https://youtu.be/pM5f4Vz3_IQ)
+
+- Agent Zero can now act as MCP Server
+- Agent Zero can use external MCP servers as tools
+
+### v0.8.4.1 - 2
+Default models set to gpt-4.1
+- Code execution tool improvements
+- Browser agent improvements
+- Memory improvements
+- Various bugfixes related to context management
+- Message formatting improvements
+- Scheduler improvements
+- New model provider
+- Input tool fix
+- Compatibility and stability improvements
+
+### v0.8.4
+[Release video](https://youtu.be/QBh_h_D_E24)
+
+- **Remote access (mobile)**
+
+### v0.8.3.1
+[Release video](https://youtu.be/AGNpQ3_GxFQ)
+
+- **Automatic embedding**
+
+### v0.8.3
+[Release video](https://youtu.be/bPIZo0poalY)
+
+- ***Planning and scheduling***
+
+### v0.8.2
+[Release video](https://youtu.be/xMUNynQ9x6Y)
+
+- **Multitasking in terminal**
+- **Chat names**
+
+### v0.8.1
+[Release video](https://youtu.be/quv145buW74)
+
+- **Browser Agent**
+- **UX Improvements**
+
+### v0.8
+[Release video](https://youtu.be/cHDCCSr1YRI)
+
+- **Docker Runtime**
+- **New Messages History and Summarization System**
+- **Agent Behavior Change and Management**
+- **Text-to-Speech (TTS) and Speech-to-Text (STT)**
+- **Settings Page in Web UI**
+- **SearXNG Integration Replacing Perplexity + DuckDuckGo**
+- **File Browser Functionality**
+- **KaTeX Math Visualization Support**
+- **In-chat File Attachments**
+
+### v0.7
+[Release video](https://youtu.be/U_Gl0NPalKA)
+
+- **Automatic Memory**
+- **UI Improvements**
+- **Instruments**
+- **Extensions Framework**
+- **Reflection Prompts**
+- **Bug Fixes**
+
+## 🤝 Community and Support
+
+- [Join our Discord](https://discord.gg/B8KZKNsPpj) for live discussions or [visit our Skool Community](https://www.skool.com/agent-zero).
+- [Follow our YouTube channel](https://www.youtube.com/@AgentZeroFW) for hands-on explanations and tutorials
+- [Report Issues](https://github.com/agent0ai/agent-zero/issues) for bug fixes and features
+
+---
+
+## Homelab deployment notes
+
+This checkout is the **host-side data directory** for the running agent-zero container. Most of the tree is just the upstream working copy; only the subdirs and files listed under "Layout" actually drive the deployment, and the patches under "Local-only commits" are the only deltas vs `upstream/main`.
+
+### Layout
+
+| Path on host | Mount target in container | Purpose |
+|---|---|---|
+| `usr/` | `/a0/usr/` (bind mount) | User plugins, chats, scheduler tasks, FAISS memory store, knowledge graph, MemPalace data, project workdirs |
+| `logs/` | `/a0/logs/` (bind mount) | Agent runtime logs (per-chat HTML transcripts, mempalace-api.log, …) |
+| `docker/run/docker-compose.yml` | — | The compose file that brings up the container; pins the image and bind mounts |
+| `docker/run/agent-zero/` | — | Local build context (`DockerfileLocal`, install scripts, copied git tree) for the locally-built image. Gitignored. |
+| `data/` | — | Misc local working dir; gitignored. |
+
+### Running image
+
+- **Image:** `agent-zero-homelab:v2.1-p1`
+- **Source repo:** [`darksider4all/agent-zero`](https://github.com/darksider4all/agent-zero) on branch `homelab` (upstream v2.1 + two framework patches; see that repo's README for details)
+- **Container name:** `agent-zero`
+- **Port:** `50080:80` on the agent LXC (192.168.0.115)
+- **Limits:** `mem_limit: 3g`, `memswap_limit: 4g`
+- **Companion container on the same host:** `ollama-embed` serving `snowflake-arctic-embed2` (1024-dim, CPU)
+
+### Local-only commits on top of `upstream/main` (branch `main`)
+
+| Commit | Title | What changed |
+|---|---|---|
+| [`6c29563`](https://github.com/darksider4all/agent-zero/commit/6c29563) | memory cold-start retry, increase container memory limit | `usr/plugins/_memory/extensions/python/monologue_start/_10_memory_init.py` — retry `_memory` init on 400 / connection errors with 10–45 s backoff to ride out the ollama-embed cold-start race. `docker/run/docker-compose.yml` — raise `mem_limit` 2 g → 3 g and `memswap_limit` 3 g → 4 g to prevent OOM under heavy load. `.gitignore` — exclude the nested `docker/run/agent-zero/` build context. |
+| [`76bc7395`](https://github.com/darksider4all/agent-zero/commit/76bc7395) | ops(compose): point at locally-built `agent-zero-homelab:v2.1-p1` | `docker/run/docker-compose.yml` (+1 −1) — switches `image:` from upstream `agent0ai/agent-zero:latest` (v1.20-based) to the locally-built `agent-zero-homelab:v2.1-p1` (upstream v2.1 + truncation + mobile CSS patches from the `agent-zero-src` homelab branch). |
+
+### Sync with upstream
 
 ```bash
-curl -LsSf https://cli.agent-zero.ai/install.sh | sh
+git fetch upstream
+git checkout main
+git rebase upstream/main   # or: git merge upstream/main
 ```
 
-### Windows PowerShell
+### Operations cheatsheet
 
-```powershell
-irm https://cli.agent-zero.ai/install.ps1 | iex
+```bash
+# Bring the container up / down
+cd docker/run && docker compose up -d
+cd docker/run && docker compose down
+
+# In-container service control (safe — does not touch the container itself)
+docker exec agent-zero supervisorctl status
+docker exec agent-zero supervisorctl restart run_ui
+
+# Memory store backups (one-off)
+ls /root/agent-zero-data/usr/memory/default/*.bak_*
 ```
-
-Then run `a0` to connect your terminal to an existing Agent Zero instance. It can usually discover a local instance automatically, or you can point it at a remote URL hosted somewhere else, such as a VPS or tunnel.
-
-This is especially useful if you:
-
-- prefer CLI workflows;
-- want Agent Zero to work in an existing local repository;
-- are running Agent Zero on a remote server;
-- want Docker isolation for Agent Zero while still granting explicit, controlled access to host-side work.
-
-For full setup, see the [A0 CLI Connector guide](https://www.agent-zero.ai/p/docs/a0-cli-connector/) (or the [in-repo guide](./docs/guides/a0-cli-connector.md)).
-
-## Projects, Skills, Agent Profiles, and Model Presets
-
-**Projects** isolate workspaces, instructions, memory, secrets, knowledge, repositories, and model presets. Clone a public or private Git repo into a project and give the agent context that belongs to that work alone.
-
-**Skills** can be loaded on demand by Agent Zero, or pinned from the chat input when you want a specific procedure to stay active.
-
-**Agent Profiles** change the broader working style of the current chat.
-
-**Model Presets** are named shortcuts for model setups, so you can quickly switch between fast, balanced, cheap, local, or high-power model choices.
-
-## Multi-Agent Cooperation
-
-Every agent can create subordinate agents to break down work. The superior gives tasks and receives reports; subagents keep their own contexts focused and return their findings when done.
-
-This makes Agent Zero useful for research, software engineering, data analysis, plugin development, and tasks where several specialized perspectives are better than one overloaded context.
-
-## Transparent and Extensible by Design
-
-Almost nothing is hidden. Prompts live in `prompts/`, tools live in `tools/` or plugins, and built-in behavior can be inspected, changed, replaced, or extended.
-
-Agent Zero supports plugins, MCP, A2A, custom tools, custom prompts, project-scoped configuration, environment-based deployment settings, and a Web UI designed to keep the agent's work readable in real time.
-
-## Try These First
-
-- **Annotate a design you like:** "Open this template site in the Browser. I'll annotate the hero section - re-implement it in my project's React + Tailwind stack."
-- **Cowork on a spreadsheet:** "Create an editable ODS budget model with assumptions and monthly projections."
-- **Drive a desktop app:** "Use the Linux Desktop to open Blender and create a simple 3D logo for me."
-- **Review a web UI:** "Open my local app in the Browser. I will annotate the page with comments; then implement the requested UI fixes."
-- **Create a specialist:** "Create an Agent Profile for financial analysis with cautious reasoning, clear assumptions, and spreadsheet-first deliverables."
-- **Recover a workspace:** "Show me recent Time Travel snapshots and explain what changed before I revert anything."
-
-## Agent Zero and Space Agent
-
-Agent Zero is the open framework and Linux-powered agent workbench.
-
-[Space Agent](https://github.com/agent0ai/space-agent) is our newer product direction for the agent-shaped workspace: a Space the agent can reshape from inside your browser, with live demos, a desktop app, and a path to running a real server for yourself or your team.
-
-<p align="left">
-  <a href="https://www.youtube.com/watch?v=CNRHxEZ8yqs"><img src="https://github.com/agent0ai/space-agent/raw/main/.github/thumbnail.webp" alt="Watch Space Agent on YouTube" width="560" /></a>
-</p>
-
-If you want the raw power and deep customizability of an agent with a full Linux system, start here with Agent Zero. If you want the polished Space experience for easier personal, team, desktop, or self-hosted use, explore [Space Agent](https://github.com/agent0ai/space-agent).
-
-
-## Time Travel (powered by Space Agent)
-
-Time Travel gives Agent Zero-owned `/a0/usr` workspaces snapshot history, diff inspection, travel, and revert. It is designed for recoverable agent work: see what changed, compare files, inspect a past state, and roll back when needed. Try it in Space Agent as well (link above).
-
-<img alt="Time Travel" src="docs/res/time-travel.png" />
-
-It is not a replacement for Git or backups. It is a practical safety layer for the workspace where agents are actively creating and editing files.
-
-## Real-World Use Cases
-
-- **Software engineering:** inspect a codebase, make scoped edits, run tests, explain tradeoffs, and keep a recoverable history of file changes.
-- **Host-machine development:** connect with `a0` and let Agent Zero work in your real local repositories, or clone them through Git Projects feature in the Web UI.
-- **Design inspiration and UI iteration:** browse the web, annotate elements you like, and pull components into your own stack.
-- **Financial analysis and charting:** collect data, correlate events, create spreadsheets, and generate editable charts.
-- **Office deliverables:** cowork on documents, spreadsheets, and presentation decks instead of trapping the result in chat text.
-- **Web and mobile QA:** browse an app, annotate UI issues, install browser extensions, and turn visual comments into actionable fixes.
-- **API integration:** paste an API snippet, let the agent build a working example, and store the pattern for future use.
-- **Client/project isolation:** keep memory, secrets, instructions, files, and model choices separated by project.
-- **Scheduled operations:** run recurring checks and monitoring tasks with project-scoped context and credentials.
-
-## Safety Model
-
-Agent Zero is powerful because it can use a real environment.
-
-- Keep it running inside Docker or another isolated environment.
-- Do not mount your entire home directory unless you understand the risk.
-- Grant A0 CLI Read+Write access and remote code execution only for machines and workspaces you trust.
-- Store credentials in project secrets or settings, not in prompts or public files.
-- Review actions that touch accounts, money, production systems, or private data.
-- Keep backups for important workspaces.
-
-## Documentation
-
-| I want to... | Start here |
-| --- | --- |
-| Install or update Agent Zero | [Installation](./docs/setup/installation.md) |
-| Learn the UI and basic workflow | [Quickstart](./docs/quickstart.md) |
-| Browse, annotate, and use Browser screenshots | [Browser guide](./docs/guides/browser.md) |
-| Use the Linux desktop and LibreOffice | [Desktop guide](./docs/guides/desktop.md) |
-| Connect Agent Zero to host-machine files and shell | [A0 CLI Connector](https://www.agent-zero.ai/p/docs/a0-cli-connector/) |
-| Use projects and Git workspaces | [Projects guide](./docs/guides/projects.md) |
-| Create a small plugin | [Create a Small Plugin](./docs/guides/create-plugin.md) |
-| Add or remove active skills | [Skills guide](./docs/guides/skills.md) |
-| Create or switch Agent Profiles | [Agent Profiles](./docs/guides/agent-profiles.md) |
-| Create or switch Model Presets | [Model Presets](./docs/guides/model-presets.md) |
-| Manage and curate memories | [Memory guide](./docs/guides/memory.md) |
-| Learn the everyday chat controls | [Usage guide](./docs/guides/usage.md) |
-| Configure MCP or external tools | [MCP setup](./docs/guides/mcp-setup.md) |
-| Understand the architecture and internals | [DeepWiki for Agent Zero](https://deepwiki.com/agent0ai/agent-zero) |
-| Build an advanced extension | [Extensions](./docs/developer/extensions.md) |
-| Contribute to the project | [Contributing](./docs/guides/contribution.md) |
-| Troubleshoot problems | [Troubleshooting](./docs/guides/troubleshooting.md) |
-
-## Build With Us
-
-Agent Zero is built for people who want to understand and shape their tools.
-
-You can help by improving docs, creating skills, publishing plugins, testing model/provider setups, reporting bugs, sharing workflows, or contributing core improvements. Start with the [Contributing guide](./docs/guides/contribution.md), browse the [Plugin Hub](https://www.agent-zero.ai/p/docs/plugins/#plugin-hub), or bring ideas to Discord.
-
-## Community and Support
-
-- [Discord](https://discord.gg/B8KZKNsPpj) for live discussion and help.
-- [Skool Community](https://www.skool.com/agent-zero) for community learning.
-- [YouTube](https://www.youtube.com/@AgentZeroFW) for demos and tutorials.
-- [X](https://x.com/Agent0ai), [LinkedIn](https://www.linkedin.com/company/109758317), and [Warpcast](https://warpcast.com/agent-zero) for updates.
-- [GitHub Issues](https://github.com/agent0ai/agent-zero/issues) for bugs and feature requests.

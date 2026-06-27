@@ -50,4 +50,4 @@ agent_history.gif
 
 .agent/**
 .claude/**
-.playwright-cli/
+docker/run/agent-zero/
