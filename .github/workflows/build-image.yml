@@ -64,18 +64,21 @@ jobs:
               .
           "
 
-      - name: Smoke test — import core framework
+      - name: Smoke test — image starts + core modules import
+        env:
+          IMG: ${{ steps.tag.outputs.image }}
+        # Run a smoke script written to a temp file on the target. Keeps
+        # all the python/shell quoting out of YAML.
         run: |
-          ssh agent "
-            sudo docker run --rm ${{ steps.tag.outputs.image }} \
-              /opt/venv-a0/bin/python3 -c '
-import sys; sys.path.insert(0, \"/a0\")
-from agent import Agent
-from helpers import settings, files
-from helpers.print_style import PrintStyle
-print(\"smoke OK\")
-              '
-          "
+          ssh agent 'cat > /tmp/agent-zero-smoke.py' <<'PYEOF'
+          import sys
+          sys.path.insert(0, "/a0")
+          from agent import Agent  # noqa: F401
+          from helpers import settings, files  # noqa: F401
+          from helpers.print_style import PrintStyle  # noqa: F401
+          print("smoke OK")
+          PYEOF
+          ssh agent "sudo docker run --rm -v /tmp/agent-zero-smoke.py:/tmp/smoke.py $IMG /opt/venv-a0/bin/python3 /tmp/smoke.py"
 
       - name: Promote tag to :latest
         # Only if smoke passed. :latest is the default tag for deploy.yml.
